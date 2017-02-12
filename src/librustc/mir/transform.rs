@@ -19,6 +19,7 @@ use std::rc::Rc;
 use syntax::ast::NodeId;
 
 use std::borrow::Cow;
+use std::mem;
 
 /// Where a specific Mir comes from.
 #[derive(Debug, Copy, Clone)]
@@ -178,6 +179,11 @@ impl<'a, 'tcx> Passes {
 
     pub fn passes(&self, suite: MirSuite) -> &[Rc<MirPass>] {
         &self.suites[suite.0]
+    }
+
+    /// Pushes the list of plugin passes in the list of passes.
+    pub fn push_passes(&mut self, suite: MirSuite, passes: &mut Vec<Rc<MirPass>>) {
+        self.suites[suite.0].extend(mem::replace(passes, vec![]));
     }
 
     pub fn hooks(&self) -> &[Rc<PassHook>] {

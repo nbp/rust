@@ -618,7 +618,8 @@ pub fn phase_2_configure_and_expand<F>(sess: &Session,
 
     let whitelisted_legacy_custom_derives = registry.take_whitelisted_custom_derives();
     let Registry { syntax_exts, early_lint_passes, late_lint_passes, lint_groups,
-                   llvm_passes, attributes, .. } = registry;
+                   llvm_passes, attributes, opt_mir_passes,
+                   .. } = registry;
 
     sess.track_errors(|| {
         let mut ls = sess.lint_store.borrow_mut();
@@ -634,6 +635,7 @@ pub fn phase_2_configure_and_expand<F>(sess: &Session,
         }
 
         *sess.plugin_llvm_passes.borrow_mut() = llvm_passes;
+        sess.opt_mir_passes.borrow_mut().extend(opt_mir_passes);
         *sess.plugin_attributes.borrow_mut() = attributes.clone();
     })?;
 
@@ -922,7 +924,7 @@ pub fn phase_3_run_analysis_passes<'tcx, F, R>(sess: &'tcx Session,
     rustc_const_eval::provide(&mut extern_providers);
 
     // Setup the MIR passes that we want to run.
-    let mut passes = Passes::new();
+    let mut passes =  Passes::new();
     passes.push_hook(mir::transform::dump_mir::DumpMir);
 
     // Remove all `EndRegion` statements that are not involved in borrows.
@@ -958,6 +960,9 @@ pub fn phase_3_run_analysis_passes<'tcx, F, R>(sess: &'tcx Session,
     passes.push_pass(MIR_OPTIMIZED, mir::transform::copy_prop::CopyPropagation);
     passes.push_pass(MIR_OPTIMIZED, mir::transform::simplify::SimplifyLocals);
     passes.push_pass(MIR_OPTIMIZED, mir::transform::add_call_guards::AddCallGuards);
+
+    // Push plugin passes before the convertion phase.
+    passes.push_passes(MIR_OPTIMIZED, &mut sess.opt_mir_passes.borrow_mut());
     passes.push_pass(MIR_OPTIMIZED, mir::transform::dump_mir::Marker("PreTrans"));
 
     TyCtxt::create_and_enter(sess,

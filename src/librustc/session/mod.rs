@@ -36,6 +36,7 @@ use syntax::{ast, codemap};
 use syntax::feature_gate::AttributeType;
 use syntax_pos::{Span, MultiSpan};
 
+use mir::transform::MirPass;
 use rustc_back::{LinkerFlavor, PanicStrategy};
 use rustc_back::target::Target;
 use rustc_data_structures::flock;
@@ -85,6 +86,7 @@ pub struct Session {
     /// in order to avoid redundantly verbose output (Issue #24690).
     pub one_time_diagnostics: RefCell<FxHashSet<(lint::LintId, Option<Span>, String)>>,
     pub plugin_llvm_passes: RefCell<Vec<String>>,
+    pub opt_mir_passes: RefCell<Vec<Rc<MirPass>>>,
     pub plugin_attributes: RefCell<Vec<(String, AttributeType)>>,
     pub crate_types: RefCell<Vec<config::CrateType>>,
     pub dependency_formats: RefCell<dependency_format::Dependencies>,
@@ -711,6 +713,7 @@ pub fn build_session_(sopts: config::Options,
         lints: RefCell::new(lint::LintTable::new()),
         one_time_diagnostics: RefCell::new(FxHashSet()),
         plugin_llvm_passes: RefCell::new(Vec::new()),
+        opt_mir_passes: RefCell::new(Vec::new()),
         plugin_attributes: RefCell::new(Vec::new()),
         crate_types: RefCell::new(Vec::new()),
         dependency_formats: RefCell::new(FxHashMap()),

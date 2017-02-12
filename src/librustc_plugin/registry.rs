@@ -12,6 +12,7 @@
 
 use rustc::lint::{EarlyLintPassObject, LateLintPassObject, LintId, Lint};
 use rustc::session::Session;
+use rustc::mir::transform::MirPass;
 
 use syntax::ext::base::{SyntaxExtension, NamedSyntaxExtension, NormalTT, IdentTT};
 use syntax::ext::base::MacroExpanderFn;
@@ -22,6 +23,7 @@ use syntax_pos::Span;
 
 use std::collections::HashMap;
 use std::borrow::ToOwned;
+use std::rc::Rc;
 
 /// Structure used to register plugins.
 ///
@@ -52,6 +54,9 @@ pub struct Registry<'a> {
     pub late_lint_passes: Vec<LateLintPassObject>,
 
     #[doc(hidden)]
+    pub opt_mir_passes: Vec<Rc<MirPass>>,
+
+    #[doc(hidden)]
     pub lint_groups: HashMap<&'static str, Vec<LintId>>,
 
     #[doc(hidden)]
@@ -76,6 +81,7 @@ impl<'a> Registry<'a> {
             lint_groups: HashMap::new(),
             llvm_passes: vec![],
             attributes: vec![],
+            opt_mir_passes: Vec::new(),
             whitelisted_custom_derives: Vec::new(),
         }
     }
@@ -150,6 +156,11 @@ impl<'a> Registry<'a> {
     /// Register a lint group.
     pub fn register_lint_group(&mut self, name: &'static str, to: Vec<&'static Lint>) {
         self.lint_groups.insert(name, to.into_iter().map(|x| LintId::of(x)).collect());
+    }
+
+    /// Register a MIR pass to be executed at the end of the MIR passes pipeline.
+    pub fn register_opt_mir_pass(&mut self, pass: Rc<MirPass>) {
+        self.opt_mir_passes.push(pass);
     }
 
     /// Register an LLVM pass.
